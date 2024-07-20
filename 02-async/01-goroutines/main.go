@@ -1,5 +1,9 @@
 package main
 
+import (
+	"time"
+)
+
 type User struct {
 	Email string
 }
@@ -35,17 +39,42 @@ func NewHandler(
 }
 
 func (h Handler) SignUp(u User) error {
-	if err := h.repository.CreateUserAccount(u); err != nil {
-		return err
-	}
+	go func() {
+		for {
+			err := h.repository.CreateUserAccount(u)
+			if err != nil {
+				time.Sleep(1 * time.Millisecond)
+				continue
+			}
 
-	if err := h.newsletterClient.AddToNewsletter(u); err != nil {
-		return err
-	}
+			return
+		}
+	}()
 
-	if err := h.notificationsClient.SendNotification(u); err != nil {
-		return err
-	}
+	go func() {
+		for {
+			err := h.newsletterClient.AddToNewsletter(u)
+			if err != nil {
+				time.Sleep(1 * time.Millisecond)
+				continue
+			}
 
+			return
+		}
+	}()
+
+	go func() {
+		for {
+			err := h.notificationsClient.SendNotification(u)
+			if err != nil {
+				time.Sleep(1 * time.Millisecond)
+				continue
+			}
+
+			return
+		}
+	}()
+
+	time.Sleep(1 * time.Second) // No way this passes and wait group does not.
 	return nil
 }
